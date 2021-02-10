@@ -131,6 +131,14 @@ public class BuildImageMojo extends AbstractPackagerMojo {
 	String runImage;
 
 	/**
+	 * Alias for {@link Image#cleanCache} to support configuration via command-line
+	 * property.
+	 * @since 2.4.0
+	 */
+	@Parameter(property = "spring-boot.build-image.cleanCache", readonly = true)
+	Boolean cleanCache;
+
+	/**
 	 * Alias for {@link Image#pullPolicy} to support configuration via command-line
 	 * property.
 	 */
@@ -189,6 +197,9 @@ public class BuildImageMojo extends AbstractPackagerMojo {
 		if (image.runImage == null && this.runImage != null) {
 			image.setRunImage(this.runImage);
 		}
+		if (image.cleanCache == null && this.cleanCache != null) {
+			image.setCleanCache(this.cleanCache);
+		}
 		if (image.pullPolicy == null && this.pullPolicy != null) {
 			image.setPullPolicy(this.pullPolicy);
 		}
@@ -219,7 +230,11 @@ public class BuildImageMojo extends AbstractPackagerMojo {
 			name.append("-").append(this.classifier);
 		}
 		name.append(".jar");
-		return new File(this.sourceDirectory, name.toString());
+		File jarFile = new File(this.sourceDirectory, name.toString());
+		if (!jarFile.exists()) {
+			throw new IllegalStateException("Executable jar file required for building image");
+		}
+		return jarFile;
 	}
 
 	private BuildRequest customize(BuildRequest request) {

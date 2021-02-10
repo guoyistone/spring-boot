@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2020 the original author or authors.
+ * Copyright 2012-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.DeprecatedConfigurationProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.security.saml2.provider.service.registration.Saml2MessageBinding;
 
@@ -63,6 +62,8 @@ public class Saml2RelyingPartyProperties {
 
 		private final Signing signing = new Signing();
 
+		private final Decryption decryption = new Decryption();
+
 		/**
 		 * Remote SAML Identity Provider.
 		 */
@@ -82,6 +83,10 @@ public class Saml2RelyingPartyProperties {
 
 		public Signing getSigning() {
 			return this.signing;
+		}
+
+		public Decryption getDecryption() {
+			return this.decryption;
 		}
 
 		public Identityprovider getIdentityprovider() {
@@ -123,8 +128,7 @@ public class Saml2RelyingPartyProperties {
 		public static class Signing {
 
 			/**
-			 * Credentials used for signing and decrypting the SAML authentication
-			 * request.
+			 * Credentials used for signing the SAML authentication request.
 			 */
 			private List<Credential> credentials = new ArrayList<>();
 
@@ -139,7 +143,7 @@ public class Saml2RelyingPartyProperties {
 			public static class Credential {
 
 				/**
-				 * Private key used for signing or decrypting.
+				 * Private key used for signing.
 				 */
 				private Resource privateKeyLocation;
 
@@ -164,6 +168,53 @@ public class Saml2RelyingPartyProperties {
 					this.certificateLocation = certificate;
 				}
 
+			}
+
+		}
+
+	}
+
+	public static class Decryption {
+
+		/**
+		 * Credentials used for decrypting the SAML authentication request.
+		 */
+		private List<Credential> credentials = new ArrayList<>();
+
+		public List<Credential> getCredentials() {
+			return this.credentials;
+		}
+
+		public void setCredentials(List<Credential> credentials) {
+			this.credentials = credentials;
+		}
+
+		public static class Credential {
+
+			/**
+			 * Private key used for decrypting.
+			 */
+			private Resource privateKeyLocation;
+
+			/**
+			 * Relying Party X509Certificate shared with the identity provider.
+			 */
+			private Resource certificateLocation;
+
+			public Resource getPrivateKeyLocation() {
+				return this.privateKeyLocation;
+			}
+
+			public void setPrivateKeyLocation(Resource privateKey) {
+				this.privateKeyLocation = privateKey;
+			}
+
+			public Resource getCertificateLocation() {
+				return this.certificateLocation;
+			}
+
+			public void setCertificateLocation(Resource certificate) {
+				this.certificateLocation = certificate;
 			}
 
 		}
@@ -203,17 +254,6 @@ public class Saml2RelyingPartyProperties {
 
 		public void setMetadataUri(String metadataUri) {
 			this.metadataUri = metadataUri;
-		}
-
-		@Deprecated
-		@DeprecatedConfigurationProperty(reason = "moved to 'singlesignon.url'")
-		public String getSsoUrl() {
-			return this.singlesignon.getUrl();
-		}
-
-		@Deprecated
-		public void setSsoUrl(String ssoUrl) {
-			this.singlesignon.setUrl(ssoUrl);
 		}
 
 		public Singlesignon getSinglesignon() {

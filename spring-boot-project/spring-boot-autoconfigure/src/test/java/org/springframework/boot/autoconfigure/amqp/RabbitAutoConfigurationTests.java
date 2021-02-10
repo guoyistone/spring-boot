@@ -33,8 +33,6 @@ import com.rabbitmq.client.impl.CredentialsRefreshService;
 import com.rabbitmq.client.impl.DefaultCredentialsProvider;
 import org.aopalliance.aop.Advice;
 import org.junit.jupiter.api.Test;
-import org.mockito.InOrder;
-import org.mockito.Mockito;
 
 import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.core.AmqpAdmin;
@@ -537,8 +535,7 @@ class RabbitAutoConfigurationTests {
 	@Test
 	void testSimpleRabbitListenerContainerFactoryConfigurerUsesConfig() {
 		this.contextRunner.withUserConfiguration(TestConfiguration.class)
-				.withPropertyValues("spring.rabbitmq.listener.type:direct",
-						"spring.rabbitmq.listener.simple.concurrency:5",
+				.withPropertyValues("spring.rabbitmq.listener.simple.concurrency:5",
 						"spring.rabbitmq.listener.simple.maxConcurrency:10",
 						"spring.rabbitmq.listener.simple.prefetch:40")
 				.run((context) -> {
@@ -555,26 +552,19 @@ class RabbitAutoConfigurationTests {
 	@Test
 	void testSimpleRabbitListenerContainerFactoryConfigurerEnableDeBatchingWithConsumerBatchEnabled() {
 		this.contextRunner.withUserConfiguration(TestConfiguration.class)
-				.withPropertyValues("spring.rabbitmq.listener.type:direct",
-						"spring.rabbitmq.listener.simple.consumer-batch-enabled:true",
-						"spring.rabbitmq.listener.simple.de-batching-enabled:false")
-				.run((context) -> {
+				.withPropertyValues("spring.rabbitmq.listener.simple.consumer-batch-enabled:true").run((context) -> {
 					SimpleRabbitListenerContainerFactoryConfigurer configurer = context
 							.getBean(SimpleRabbitListenerContainerFactoryConfigurer.class);
 					SimpleRabbitListenerContainerFactory factory = mock(SimpleRabbitListenerContainerFactory.class);
 					configurer.configure(factory, mock(ConnectionFactory.class));
-					InOrder inOrder = Mockito.inOrder(factory);
 					verify(factory).setConsumerBatchEnabled(true);
-					inOrder.verify(factory).setDeBatchingEnabled(false);
-					inOrder.verify(factory).setDeBatchingEnabled(true);
 				});
 	}
 
 	@Test
 	void testDirectRabbitListenerContainerFactoryConfigurerUsesConfig() {
 		this.contextRunner.withUserConfiguration(TestConfiguration.class)
-				.withPropertyValues("spring.rabbitmq.listener.type:simple",
-						"spring.rabbitmq.listener.direct.consumers-per-queue:5",
+				.withPropertyValues("spring.rabbitmq.listener.direct.consumers-per-queue:5",
 						"spring.rabbitmq.listener.direct.prefetch:40",
 						"spring.rabbitmq.listener.direct.de-batching-enabled:false")
 				.run((context) -> {
@@ -745,6 +735,47 @@ class RabbitAutoConfigurationTests {
 					com.rabbitmq.client.ConnectionFactory rabbitConnectionFactory = getTargetConnectionFactory(context);
 					TrustManager trustManager = getTrustManager(rabbitConnectionFactory);
 					assertThat(trustManager).isNotInstanceOf(TrustEverythingTrustManager.class);
+				});
+	}
+
+	@Test
+	void enableSslWithValidStoreAlgorithmShouldWork() {
+		this.contextRunner.withUserConfiguration(TestConfiguration.class)
+				.withPropertyValues("spring.rabbitmq.ssl.enabled:true",
+						"spring.rabbitmq.ssl.keyStore=/org/springframework/boot/autoconfigure/amqp/test.jks",
+						"spring.rabbitmq.ssl.keyStoreType=jks", "spring.rabbitmq.ssl.keyStorePassword=secret",
+						"spring.rabbitmq.ssl.keyStoreAlgorithm=PKIX",
+						"spring.rabbitmq.ssl.trustStore=/org/springframework/boot/autoconfigure/amqp/test.jks",
+						"spring.rabbitmq.ssl.trustStoreType=jks", "spring.rabbitmq.ssl.trustStorePassword=secret",
+						"spring.rabbitmq.ssl.trustStoreAlgorithm=PKIX")
+				.run((context) -> assertThat(context).hasNotFailed());
+	}
+
+	@Test
+	void enableSslWithInvalidKeyStoreAlgorithmShouldFail() {
+		this.contextRunner.withUserConfiguration(TestConfiguration.class)
+				.withPropertyValues("spring.rabbitmq.ssl.enabled:true",
+						"spring.rabbitmq.ssl.keyStore=/org/springframework/boot/autoconfigure/amqp/test.jks",
+						"spring.rabbitmq.ssl.keyStoreType=jks", "spring.rabbitmq.ssl.keyStorePassword=secret",
+						"spring.rabbitmq.ssl.keyStoreAlgorithm=test-invalid-algo")
+				.run((context) -> {
+					assertThat(context).hasFailed();
+					assertThat(context).getFailure().hasMessageContaining("test-invalid-algo");
+					assertThat(context).getFailure().hasRootCauseInstanceOf(NoSuchAlgorithmException.class);
+				});
+	}
+
+	@Test
+	void enableSslWithInvalidTrustStoreAlgorithmShouldFail() {
+		this.contextRunner.withUserConfiguration(TestConfiguration.class)
+				.withPropertyValues("spring.rabbitmq.ssl.enabled:true",
+						"spring.rabbitmq.ssl.trustStore=/org/springframework/boot/autoconfigure/amqp/test.jks",
+						"spring.rabbitmq.ssl.trustStoreType=jks", "spring.rabbitmq.ssl.trustStorePassword=secret",
+						"spring.rabbitmq.ssl.trustStoreAlgorithm=test-invalid-algo")
+				.run((context) -> {
+					assertThat(context).hasFailed();
+					assertThat(context).getFailure().hasMessageContaining("test-invalid-algo");
+					assertThat(context).getFailure().hasRootCauseInstanceOf(NoSuchAlgorithmException.class);
 				});
 	}
 
